@@ -1,0 +1,40 @@
+name: "NATS JetStream Consumer Delete Utility"
+description: "Deletes a NATS JetStream Consumer"
+author: "R.I.Pienaar"
+branding:
+  icon: "chevron-right"
+  color: "red"
+
+inputs:
+  stream:
+    description: "The Stream to delete a consumer from"
+    required: true
+
+  consumer:
+    description: "The Consumer to delete"
+    required: true
+
+  server:
+    description: "The URL of the NATS Server to connect to"
+    required: true
+
+  username:
+    description: "The username to connect with"
+    required: false
+
+  password:
+    description: "The password to connect with"
+    required: false
+
+  credentials:
+    description: "The credentials file to connect with"
+    required: false
+
+  command:
+    description: "The command to run within the container"
+    required: false
+    default: DELETE_CONSUMER
+
+runs:
+  using: 'docker'
+  image: 'docker://synadia/jetstream-gh-action:latest'
