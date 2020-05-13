@@ -7,7 +7,9 @@ import (
 	"log"
 	"strings"
 
+	"github.com/nats-io/jsm.go"
 	"github.com/nats-io/jsm.go/api"
+	"github.com/nats-io/nats.go"
 	gha "github.com/sethvargo/go-githubactions"
 )
 
@@ -26,6 +28,12 @@ func main() {
 	case "VALIDATE_CONSUMER_CONFIG":
 		err = handleValidateConsumerConfig()
 
+	case "CREATE_STREAM":
+		err = handleCreateStream()
+
+	case "CREATE_CONSUMER":
+		err = handleCreateConsumer()
+
 	default:
 		err = fmt.Errorf("invalid command '%s'", command)
 	}
@@ -33,6 +41,126 @@ func main() {
 	if err != nil {
 		gha.Fatalf("JetStream Action failed: %s", err)
 	}
+}
+
+func handleCreateStream() error {
+	gha.Group("JetStream Connection")
+	nc, err := connect()
+	if err != nil {
+		return err
+	}
+	log.Printf("Connected to %s", nc.ConnectedUrl())
+	gha.EndGroup()
+
+	gha.Group("Create Stream")
+	cfile := gha.GetInput("CONFIG")
+	if cfile == "" {
+		return fmt.Errorf("CONFIG is required")
+	}
+
+	cj, err := ioutil.ReadFile(cfile)
+	if err != nil {
+		return err
+	}
+
+	var cfg api.StreamConfig
+	err = json.Unmarshal(cj, &cfg)
+	if err != nil {
+		return err
+	}
+
+	stream, err := jsm.NewStreamFromDefault(cfg.Name, cfg, jsm.StreamConnection(jsm.WithConnection(nc)))
+	if err != nil {
+		return err
+	}
+
+	log.Printf("Created Consumer: \n\n%+v", stream.Configuration())
+
+	cj, err = json.MarshalIndent(stream.Configuration(), "", "  ")
+	if err != nil {
+		return err
+	}
+	gha.SetOutput("config", string(cj))
+
+	gha.EndGroup()
+
+	return nil
+}
+
+func handleCreateConsumer() error {
+	gha.Group("JetStream Connection")
+	nc, err := connect()
+	if err != nil {
+		return err
+	}
+	log.Printf("Connected to %s", nc.ConnectedUrl())
+	gha.EndGroup()
+
+	gha.Group("Create Consumer")
+	cfile := gha.GetInput("CONFIG")
+	if cfile == "" {
+		return fmt.Errorf("CONFIG is required")
+	}
+
+	stream := gha.GetInput("STREAM")
+	if stream == "" {
+		return fmt.Errorf("STREAM is required")
+	}
+
+	cj, err := ioutil.ReadFile(cfile)
+	if err != nil {
+		return err
+	}
+
+	var cfg api.ConsumerConfig
+	err = json.Unmarshal(cj, &cfg)
+	if err != nil {
+		return err
+	}
+
+	consumer, err := jsm.NewConsumerFromDefault(stream, cfg, jsm.ConsumerConnection(jsm.WithConnection(nc)))
+	if err != nil {
+		return err
+	}
+
+	log.Printf("Created Consumer: \n\n%+v", consumer.Configuration())
+
+	cj, err = json.MarshalIndent(consumer.Configuration(), "", "  ")
+	if err != nil {
+		return err
+	}
+	gha.SetOutput("config", string(cj))
+
+	gha.EndGroup()
+
+	return nil
+}
+
+func connect() (*nats.Conn, error) {
+	creds := gha.GetInput("CREDENTIALS")
+	user := gha.GetInput("USERNAME")
+	pass := gha.GetInput("PASSWORD")
+
+	server := gha.GetInput("SERVER")
+	if server == "" {
+		return nil, fmt.Errorf("SERVER is required")
+	}
+
+	opts := []nats.Option{
+		nats.ErrorHandler(func(_ *nats.Conn, _ *nats.Subscription, err error) {
+			gha.Fatalf("NATS Error: %s", err)
+		}),
+	}
+
+	if user != "" {
+		opts = append(opts, nats.UserInfo(user, pass))
+	}
+
+	if creds != "" {
+		opts = append(opts, nats.UserCredentials(creds))
+	}
+
+	return nats.Connect(server, opts...)
 }
 
 func handleValidateStreamConfig() error {
