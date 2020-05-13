@@ -1,0 +1,17 @@
+name: "NATS JetStream Consumer Configuration Validator"
+description: "Validate configuration files for NATS JetStream Consumers"
+author: "R.I.Pienaar"
+branding:
+  icon: "check"
+  color: "green"
+inputs:
+  config:
+    description: "Configuration file to validate"
+    required: true
+  command:
+    description: "The command to run within the container"
+    required: false
+    default: VALIDATE_CONSUMER_CONFIG
+runs:
+  using: 'docker'
+  image: 'docker://synadia/jetstream-gh-action:latest'

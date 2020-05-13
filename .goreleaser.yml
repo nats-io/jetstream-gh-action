@@ -1,0 +1,34 @@
+project_name: jetstream-gh-action
+
+release:
+  github:
+    owner: nats-io
+    name: jetstream-gh-action
+  name_template: "Release {{.Tag}}"
+  draft: true
+
+changelog:
+  skip: true
+
+builds:
+  - id: action
+    main: ./action
+    binary: action
+    env:
+      - GO111MODULE=on
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+
+dockers:
+  - goos: linux
+    goarch: amd64
+    skip_push: true
+    dockerfile: action/Dockerfile
+    binaries:
+      - action
+    image_templates:
+      - "synadia/jetstream-gh-action:latest"
+      - "synadia/jetstream-gh-action:{{.Version}}"

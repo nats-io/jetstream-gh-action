@@ -1,0 +1,4 @@
+{
+  "subjects": ["ORDERS.*"],
+  "num_replicas": 1
+}
