@@ -1,14 +1,22 @@
-name: "NATS JetStream Stream Creation Utility"
-description: "Creates NATS JetStream Streams using configuration files"
+name: "NATS JetStream Message Publish Utility"
+description: "Publish a message to a JetStream Stream"
 author: "R.I.Pienaar"
 branding:
-  icon: "folder-plus"
+  icon: "message-circle"
   color: "green"
 
 inputs:
-  config:
-    description: "Configuration file to use"
+  subject:
+    description: "The subject to publish to"
     required: true
+
+  message:
+    description: "The message to publish"
+    required: true
+
+  should_ack:
+    description: "Requires a response from JetStream for success"
+    default: 1
 
   server:
     description: "The URL of the NATS Server to connect to"
@@ -29,11 +37,11 @@ inputs:
   command:
     description: "The command to run within the container"
     required: false
-    default: CREATE_STREAM
+    default: PUBLISH
 
 outputs:
-  config:
-    description: "The Configuration that was created as JSON"
+  response:
+    description: "The response from JetStream"
 
 runs:
   using: 'docker'
