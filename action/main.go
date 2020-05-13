@@ -74,13 +74,12 @@ func handleCreateStream() error {
 		return err
 	}
 
-	log.Printf("Created Consumer: \n\n%+v", stream.Configuration())
-
 	cj, err = json.MarshalIndent(stream.Configuration(), "", "  ")
 	if err != nil {
 		return err
 	}
 	gha.SetOutput("config", string(cj))
+	gha.Debugf("Created Stream: \n%s", string(cj))
 
 	gha.EndGroup()
 
@@ -123,13 +122,12 @@ func handleCreateConsumer() error {
 		return err
 	}
 
-	log.Printf("Created Consumer: \n\n%+v", consumer.Configuration())
-
 	cj, err = json.MarshalIndent(consumer.Configuration(), "", "  ")
 	if err != nil {
 		return err
 	}
 	gha.SetOutput("config", string(cj))
+	gha.Debugf("Created Consumer: \n%s", string(cj))
 
 	gha.EndGroup()
 

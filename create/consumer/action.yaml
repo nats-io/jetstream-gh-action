@@ -33,7 +33,7 @@ inputs:
   command:
     description: "The command to run within the container"
     required: false
-    default: CREATE_STREAM
+    default: CREATE_CONSUMER
 
 outputs:
   config:
