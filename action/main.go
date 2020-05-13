@@ -7,6 +7,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/nats-io/jsm.go"
 	"github.com/nats-io/jsm.go/api"
@@ -42,6 +43,12 @@ func main() {
 	case "CREATE_CONSUMER":
 		err = handleCreateConsumer()
 
+	case "UPDATE_STREAM":
+		err = handleUpdateStream()
+
+	case "PUBLISH":
+		err = handlePublish()
+
 	default:
 		err = fmt.Errorf("invalid command '%s'", command)
 	}
@@ -49,6 +56,116 @@ func main() {
 	if err != nil {
 		gha.Fatalf("JetStream Action failed: %s", err)
 	}
+}
+
+func handlePublish() error {
+	subj := gha.GetInput("SUBJECT")
+	if subj == "" {
+		return fmt.Errorf("SUBJECT is required")
+	}
+
+	msg := gha.GetInput("MESSAGE")
+	if msg == "" {
+		return fmt.Errorf("MESSAGE is required")
+	}
+
+	shouldAck, err := strconv.ParseBool(gha.GetInput("SHOULD_ACK"))
+	if err != nil {
+		shouldAck = true
+	}
+
+	nc, err := connect()
+	if err != nil {
+		return err
+	}
+
+	log.Printf("Connected to %s", nc.ConnectedUrl())
+
+	if shouldAck {
+		resp, err := nc.Request(subj, []byte(msg), 5*time.Second)
+		if err != nil {
+			gha.SetOutput("response", err.Error())
+			return fmt.Errorf("publish Request failed: %s", err)
+		}
+
+		if !jsm.IsOKResponse(resp) {
+			gha.SetOutput("response", string(resp.Data))
+			return fmt.Errorf("publish failed: %s", string(resp.Data))
+		}
+
+		log.Println(string(resp.Data))
+
+		gha.SetOutput("response", string(resp.Data))
+
+		return nil
+	}
+
+	err = nc.Publish(subj, []byte(msg))
+	if err != nil {
+		gha.SetOutput("response", err.Error())
+		return err
+	}
+
+	err = nc.Flush()
+	if err != nil {
+		gha.SetOutput("response", err.Error())
+		return err
+	}
+
+	gha.SetOutput("response", "published without requesting Ack")
+
+	return nil
+}
+
+func handleUpdateStream() error {
+	nc, err := connect()
+	if err != nil {
+		return err
+	}
+	log.Printf("Connected to %s", nc.ConnectedUrl())
+
+	stream := gha.GetInput("STREAM")
+	if stream == "" {
+		return fmt.Errorf("STREAM is required")
+	}
+
+	cfile := gha.GetInput("CONFIG")
+	if cfile == "" {
+		return fmt.Errorf("CONFIG is required")
+	}
+
+	cj, err := ioutil.ReadFile(cfile)
+	if err != nil {
+		return err
+	}
+
+	var cfg api.StreamConfig
+	err = json.Unmarshal(cj, &cfg)
+	if err != nil {
+		return err
+	}
+
+	str, err := jsm.LoadStream(stream, jsm.WithConnection(nc))
+	if err != nil {
+		return err
+	}
+
+	err = str.UpdateConfiguration(cfg)
+	if err != nil {
+		return err
+	}
+
+	str.Reset()
+
+	cj, err = json.Marshal(str.Configuration())
+	if err != nil {
+		return err
+	}
+	gha.SetOutput("config", string(cj))
+
+	log.Printf("Configuration: %s", string(cj))
+
+	return nil
 }
 
 func handleDeleteConsumer() error {

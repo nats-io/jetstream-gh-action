@@ -1,13 +1,17 @@
-name: "NATS JetStream Stream Creation Utility"
-description: "Creates NATS JetStream Streams using configuration files"
+name: "NATS JetStream Stream Update Utility"
+description: "Updates NATS JetStream Streams using configuration files"
 author: "R.I.Pienaar"
 branding:
   icon: "folder-plus"
-  color: "green"
+  color: "yellow"
 
 inputs:
   config:
     description: "Configuration file to use"
+    required: true
+
+  stream:
+    description: "The name of the Stream to update"
     required: true
 
   server:
@@ -29,7 +33,7 @@ inputs:
   command:
     description: "The command to run within the container"
     required: false
-    default: CREATE_STREAM
+    default: UPDATE_STREAM
 
 outputs:
   config:
