@@ -18,7 +18,7 @@ See individual action directory for detailed usage instructions.
 
 ## Publishing Messages
 
-Messages can be published to a Stream - or any NATS subject - using the base action.
+Messages can be published to a Stream, or any NATS subject, using the base action.
 
 ### Usage
 
@@ -34,7 +34,7 @@ jobs:
         uses: nats-io/jetstream-gh-action@master
         with:
           subject: ORDERS.deploy
-          message: Deployed versoin xxx
+          message: Published new deployment via "${{ github.event_name }}" in "${{ github.repository }}"
           should_ack: 1
           server: nats.example.net:4222
 ```
