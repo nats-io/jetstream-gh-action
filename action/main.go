@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"strconv"
 	"strings"
 
 	"github.com/nats-io/jsm.go"
@@ -21,12 +22,19 @@ func main() {
 	var err error
 
 	command := gha.GetInput("COMMAND")
+	gha.Debugf("Running command: %s", command)
 	switch command {
 	case "VALIDATE_STREAM_CONFIG":
 		err = handleValidateStreamConfig()
 
 	case "VALIDATE_CONSUMER_CONFIG":
 		err = handleValidateConsumerConfig()
+
+	case "DELETE_STREAM":
+		err = handleDeleteStream()
+
+	case "DELETE_CONSUMER":
+		err = handleDeleteConsumer()
 
 	case "CREATE_STREAM":
 		err = handleCreateStream()
@@ -43,16 +51,110 @@ func main() {
 	}
 }
 
-func handleCreateStream() error {
-	gha.Group("JetStream Connection")
+func handleDeleteConsumer() error {
 	nc, err := connect()
 	if err != nil {
 		return err
 	}
 	log.Printf("Connected to %s", nc.ConnectedUrl())
-	gha.EndGroup()
 
-	gha.Group("Create Stream")
+	stream := gha.GetInput("STREAM")
+	if stream == "" {
+		return fmt.Errorf("STREAM is required")
+	}
+
+	consumer := gha.GetInput("CONSUMER")
+	if consumer == "" {
+		return fmt.Errorf("CONSUMER is required")
+	}
+
+	missingok, err := strconv.ParseBool(gha.GetInput("MISSING_OK"))
+	if err != nil {
+		missingok = false
+	}
+
+	known, err := jsm.IsKnownStream(stream, jsm.WithConnection(nc))
+	if err != nil {
+		return err
+	}
+
+	if missingok && !known {
+		log.Printf("Stream %s was not present", stream)
+		return nil
+	}
+
+	if !known {
+		gha.Fatalf("Stream %s does not exist", stream)
+	}
+
+	known, err = jsm.IsKnownConsumer(stream, consumer, jsm.WithConnection(nc))
+	if err != nil {
+		return err
+	}
+
+	if missingok && !known {
+		log.Printf("Consumer %s > %s was not present", stream, consumer)
+		return nil
+	}
+
+	if !known {
+		gha.Fatalf("Consumer %s > %s does not exist", stream, consumer)
+	}
+
+	cons, err := jsm.LoadConsumer(stream, consumer, jsm.WithConnection(nc))
+	if err != nil {
+		return err
+	}
+
+	return cons.Delete()
+}
+
+func handleDeleteStream() error {
+	nc, err := connect()
+	if err != nil {
+		return err
+	}
+	log.Printf("Connected to %s", nc.ConnectedUrl())
+
+	stream := gha.GetInput("STREAM")
+	if stream == "" {
+		return fmt.Errorf("STREAM is required")
+	}
+
+	missingok, err := strconv.ParseBool(gha.GetInput("MISSING_OK"))
+	if err != nil {
+		missingok = false
+	}
+
+	known, err := jsm.IsKnownStream(stream, jsm.WithConnection(nc))
+	if err != nil {
+		return err
+	}
+
+	if missingok && !known {
+		log.Printf("Stream %s was not present", stream)
+		return nil
+	}
+
+	if !known {
+		gha.Fatalf("Stream %s does not exist, cannot delete it", stream)
+	}
+
+	str, err := jsm.LoadStream(stream, jsm.WithConnection(nc))
+	if err != nil {
+		return err
+	}
+
+	return str.Delete()
+}
+
+func handleCreateStream() error {
+	nc, err := connect()
+	if err != nil {
+		return err
+	}
+	log.Printf("Connected to %s", nc.ConnectedUrl())
+
 	cfile := gha.GetInput("CONFIG")
 	if cfile == "" {
 		return fmt.Errorf("CONFIG is required")
@@ -74,28 +176,24 @@ func handleCreateStream() error {
 		return err
 	}
 
-	cj, err = json.MarshalIndent(stream.Configuration(), "", "  ")
+	cj, err = json.Marshal(stream.Configuration())
 	if err != nil {
 		return err
 	}
 	gha.SetOutput("config", string(cj))
-	gha.Debugf("Created Stream: \n%s", string(cj))
 
-	gha.EndGroup()
+	log.Printf("Configuration: %s", string(cj))
 
 	return nil
 }
 
 func handleCreateConsumer() error {
-	gha.Group("JetStream Connection")
 	nc, err := connect()
 	if err != nil {
 		return err
 	}
 	log.Printf("Connected to %s", nc.ConnectedUrl())
-	gha.EndGroup()
 
-	gha.Group("Create Consumer")
 	cfile := gha.GetInput("CONFIG")
 	if cfile == "" {
 		return fmt.Errorf("CONFIG is required")
@@ -122,14 +220,13 @@ func handleCreateConsumer() error {
 		return err
 	}
 
-	cj, err = json.MarshalIndent(consumer.Configuration(), "", "  ")
+	cj, err = json.Marshal(consumer.Configuration())
 	if err != nil {
 		return err
 	}
 	gha.SetOutput("config", string(cj))
-	gha.Debugf("Created Consumer: \n%s", string(cj))
 
-	gha.EndGroup()
+	log.Printf("Configuration: %s", string(cj))
 
 	return nil
 }
