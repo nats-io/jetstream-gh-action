@@ -7,15 +7,13 @@ jobs:
       - uses: actions/checkout@master
       - name: bad json
         id: bad_json
+        continue-on-error: true
         uses: nats-io/jetstream-gh-action/validate/stream@master
         with:
           config: action/testdata/bad-json.json
-  expect_failure:
-    runs-on: ubuntu-latest
-    needs: bad_json_validate
-    if: always()
-    steps:
-      - uses: technote-space/workflow-conclusion-action@v1
       - name: expect_failure
-        if: env.WORKFLOW_CONCLUSION == 'success'
+        if: steps.bad_json.outcome != 'failure'
         run: exit 1
+      - name: report_failure
+        if: steps.bad_json.outcome == 'failure'
+        run: echo "bad json file succesfully failed to validate"
