@@ -1,9 +1,8 @@
 on: push
 name: stream
 jobs:
-  bad_json:
+  stream_validate:
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@master
       - name: stream

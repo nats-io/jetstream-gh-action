@@ -1,7 +1,7 @@
 on: push
-name: bad
+name: bad_json
 jobs:
-  bad_json:
+  bad_json_validate:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
@@ -10,24 +10,3 @@ jobs:
         uses: nats-io/jetstream-gh-action/validate/stream@master
         with:
           config: action/testdata/bad-json.json
-#  stream:
-#    runs-on: ubuntu-latest
-#    continue-on-error: true
-#    steps:
-#      - uses: actions/checkout@master
-#      - name: stream
-#        uses: ripienaar/action-jetstream-validate@master
-#        with:
-#          file: stream.json
-#          type: STREAM
-#
-#  consumer:
-#    runs-on: ubuntu-latest
-#    continue-on-error: true
-#    steps:
-#      - uses: actions/checkout@master
-#      - name: consumner
-#        uses: ripienaar/action-jetstream-validate@master
-#        with:
-#          file: consumer.json
-#          type: CONSUMER

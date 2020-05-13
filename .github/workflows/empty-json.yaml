@@ -1,7 +1,7 @@
 on: push
-name: empty
+name: empty_json
 jobs:
-  bad_json:
+  empty_json_validate:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:

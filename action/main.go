@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"strings"
 
 	"github.com/nats-io/jsm.go/api"
@@ -42,6 +43,7 @@ func handleValidateStreamConfig() error {
 	}
 
 	if valid {
+		log.Printf("%s is a valid Stream Configuration", cfile)
 		return nil
 	}
 
@@ -56,6 +58,7 @@ func handleValidateConsumerConfig() error {
 	}
 
 	if valid {
+		log.Printf("%s is a valid Consumer Configuration", cfile)
 		return nil
 	}
 
