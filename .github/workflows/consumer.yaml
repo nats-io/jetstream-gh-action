@@ -1,12 +1,11 @@
 on: push
 name: consumer
 jobs:
-  bad_json:
+  consumer_validate:
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@master
       - name: consumer
-        uses: nats-io/jetstream-gh-action/validate/stream@master
+        uses: nats-io/jetstream-gh-action/validate/consumer@master
         with:
           config: action/testdata/consumer.json
