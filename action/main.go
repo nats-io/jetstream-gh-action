@@ -46,6 +46,9 @@ func main() {
 	case "UPDATE_STREAM":
 		err = handleUpdateStream()
 
+	case "PURGE_STREAM":
+		err = handlePurgeStream()
+
 	case "PUBLISH":
 		err = handlePublish()
 
@@ -56,6 +59,26 @@ func main() {
 	if err != nil {
 		gha.Fatalf("JetStream Action failed: %s", err)
 	}
+}
+
+func handlePurgeStream() error {
+	stream := gha.GetInput("STREAM")
+	if stream == "" {
+		return fmt.Errorf("STREAM is required")
+	}
+
+	nc, err := connect()
+	if err != nil {
+		return err
+	}
+	log.Printf("Connected to %s", nc.ConnectedUrl())
+
+	str, err := jsm.LoadStream(stream, jsm.WithConnection(nc))
+	if err != nil {
+		return err
+	}
+
+	return str.Purge()
 }
 
 func handlePublish() error {
@@ -118,12 +141,6 @@ func handlePublish() error {
 }
 
 func handleUpdateStream() error {
-	nc, err := connect()
-	if err != nil {
-		return err
-	}
-	log.Printf("Connected to %s", nc.ConnectedUrl())
-
 	stream := gha.GetInput("STREAM")
 	if stream == "" {
 		return fmt.Errorf("STREAM is required")
@@ -144,6 +161,12 @@ func handleUpdateStream() error {
 	if err != nil {
 		return err
 	}
+
+	nc, err := connect()
+	if err != nil {
+		return err
+	}
+	log.Printf("Connected to %s", nc.ConnectedUrl())
 
 	str, err := jsm.LoadStream(stream, jsm.WithConnection(nc))
 	if err != nil {
@@ -169,12 +192,6 @@ func handleUpdateStream() error {
 }
 
 func handleDeleteConsumer() error {
-	nc, err := connect()
-	if err != nil {
-		return err
-	}
-	log.Printf("Connected to %s", nc.ConnectedUrl())
-
 	stream := gha.GetInput("STREAM")
 	if stream == "" {
 		return fmt.Errorf("STREAM is required")
@@ -189,6 +206,12 @@ func handleDeleteConsumer() error {
 	if err != nil {
 		missingok = false
 	}
+
+	nc, err := connect()
+	if err != nil {
+		return err
+	}
+	log.Printf("Connected to %s", nc.ConnectedUrl())
 
 	known, err := jsm.IsKnownStream(stream, jsm.WithConnection(nc))
 	if err != nil {
@@ -227,12 +250,6 @@ func handleDeleteConsumer() error {
 }
 
 func handleDeleteStream() error {
-	nc, err := connect()
-	if err != nil {
-		return err
-	}
-	log.Printf("Connected to %s", nc.ConnectedUrl())
-
 	stream := gha.GetInput("STREAM")
 	if stream == "" {
 		return fmt.Errorf("STREAM is required")
@@ -242,6 +259,12 @@ func handleDeleteStream() error {
 	if err != nil {
 		missingok = false
 	}
+
+	nc, err := connect()
+	if err != nil {
+		return err
+	}
+	log.Printf("Connected to %s", nc.ConnectedUrl())
 
 	known, err := jsm.IsKnownStream(stream, jsm.WithConnection(nc))
 	if err != nil {
@@ -266,12 +289,6 @@ func handleDeleteStream() error {
 }
 
 func handleCreateStream() error {
-	nc, err := connect()
-	if err != nil {
-		return err
-	}
-	log.Printf("Connected to %s", nc.ConnectedUrl())
-
 	cfile := gha.GetInput("CONFIG")
 	if cfile == "" {
 		return fmt.Errorf("CONFIG is required")
@@ -287,6 +304,12 @@ func handleCreateStream() error {
 	if err != nil {
 		return err
 	}
+
+	nc, err := connect()
+	if err != nil {
+		return err
+	}
+	log.Printf("Connected to %s", nc.ConnectedUrl())
 
 	stream, err := jsm.NewStreamFromDefault(cfg.Name, cfg, jsm.StreamConnection(jsm.WithConnection(nc)))
 	if err != nil {
@@ -305,12 +328,6 @@ func handleCreateStream() error {
 }
 
 func handleCreateConsumer() error {
-	nc, err := connect()
-	if err != nil {
-		return err
-	}
-	log.Printf("Connected to %s", nc.ConnectedUrl())
-
 	cfile := gha.GetInput("CONFIG")
 	if cfile == "" {
 		return fmt.Errorf("CONFIG is required")
@@ -331,6 +348,12 @@ func handleCreateConsumer() error {
 	if err != nil {
 		return err
 	}
+
+	nc, err := connect()
+	if err != nil {
+		return err
+	}
+	log.Printf("Connected to %s", nc.ConnectedUrl())
 
 	consumer, err := jsm.NewConsumerFromDefault(stream, cfg, jsm.ConsumerConnection(jsm.WithConnection(nc)))
 	if err != nil {
