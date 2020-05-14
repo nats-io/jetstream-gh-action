@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -12,57 +13,57 @@ import (
 	"github.com/nats-io/jsm.go"
 	"github.com/nats-io/jsm.go/api"
 	"github.com/nats-io/nats.go"
-	gha "github.com/sethvargo/go-githubactions"
 )
+
+type handler func() error
 
 type validatable interface {
 	Validate() (bool, []string)
 }
 
+type environment interface {
+	GetInput(string) string
+	SetOutput(string, string) error
+	Fatalf(string, ...interface{})
+	Debugf(string, ...interface{})
+}
+
+var (
+	commands = make(map[string]handler)
+	env      environment
+)
+
 func main() {
-	var err error
+	switch {
+	case os.Getenv("GITHUB_ACTIONS") == "true":
+		env = github{}
 
-	command := gha.GetInput("COMMAND")
-	gha.Debugf("Running command: %s", command)
-	switch command {
-	case "VALIDATE_STREAM_CONFIG":
-		err = handleValidateStreamConfig()
-
-	case "VALIDATE_CONSUMER_CONFIG":
-		err = handleValidateConsumerConfig()
-
-	case "DELETE_STREAM":
-		err = handleDeleteStream()
-
-	case "DELETE_CONSUMER":
-		err = handleDeleteConsumer()
-
-	case "CREATE_STREAM":
-		err = handleCreateStream()
-
-	case "CREATE_CONSUMER":
-		err = handleCreateConsumer()
-
-	case "UPDATE_STREAM":
-		err = handleUpdateStream()
-
-	case "PURGE_STREAM":
-		err = handlePurgeStream()
-
-	case "PUBLISH":
-		err = handlePublish()
+	case os.Getenv("TEKTON") == "true":
+		env = tekton{}
 
 	default:
-		err = fmt.Errorf("invalid command '%s'", command)
+		panic("Cannot determine execution environment")
+
 	}
 
-	if err != nil {
-		gha.Fatalf("JetStream Action failed: %s", err)
-	}
+	mustRegister("VALIDATE_STREAM_CONFIG", handleValidateStreamConfig)
+	mustRegister("VALIDATE_CONSUMER_CONFIG", handleValidateConsumerConfig)
+
+	mustRegister("DELETE_STREAM", handleDeleteStream)
+	mustRegister("DELETE_CONSUMER", handleDeleteConsumer)
+
+	mustRegister("CREATE_STREAM", handleCreateStream)
+	mustRegister("CREATE_CONSUMER", handleCreateConsumer)
+
+	mustRegister("UPDATE_STREAM", handleUpdateStream)
+	mustRegister("PURGE_STREAM", handlePurgeStream)
+	mustRegister("PUBLISH", handlePublish)
+
+	runAction()
 }
 
 func handlePurgeStream() error {
-	stream := gha.GetInput("STREAM")
+	stream := env.GetInput("STREAM")
 	if stream == "" {
 		return fmt.Errorf("STREAM is required")
 	}
@@ -82,17 +83,17 @@ func handlePurgeStream() error {
 }
 
 func handlePublish() error {
-	subj := gha.GetInput("SUBJECT")
+	subj := env.GetInput("SUBJECT")
 	if subj == "" {
 		return fmt.Errorf("SUBJECT is required")
 	}
 
-	msg := gha.GetInput("MESSAGE")
+	msg := env.GetInput("MESSAGE")
 	if msg == "" {
 		return fmt.Errorf("MESSAGE is required")
 	}
 
-	shouldAck, err := strconv.ParseBool(gha.GetInput("SHOULD_ACK"))
+	shouldAck, err := strconv.ParseBool(env.GetInput("SHOULD_ACK"))
 	if err != nil {
 		shouldAck = true
 	}
@@ -107,46 +108,46 @@ func handlePublish() error {
 	if shouldAck {
 		resp, err := nc.Request(subj, []byte(msg), 5*time.Second)
 		if err != nil {
-			gha.SetOutput("response", err.Error())
+			env.SetOutput("response", err.Error())
 			return fmt.Errorf("publish Request failed: %s", err)
 		}
 
 		if !jsm.IsOKResponse(resp) {
-			gha.SetOutput("response", string(resp.Data))
+			env.SetOutput("response", string(resp.Data))
 			return fmt.Errorf("publish failed: %s", string(resp.Data))
 		}
 
 		log.Println(string(resp.Data))
 
-		gha.SetOutput("response", string(resp.Data))
+		env.SetOutput("response", string(resp.Data))
 
 		return nil
 	}
 
 	err = nc.Publish(subj, []byte(msg))
 	if err != nil {
-		gha.SetOutput("response", err.Error())
+		env.SetOutput("response", err.Error())
 		return err
 	}
 
 	err = nc.Flush()
 	if err != nil {
-		gha.SetOutput("response", err.Error())
+		env.SetOutput("response", err.Error())
 		return err
 	}
 
-	gha.SetOutput("response", "published without requesting Ack")
+	env.SetOutput("response", "published without requesting Ack")
 
 	return nil
 }
 
 func handleUpdateStream() error {
-	stream := gha.GetInput("STREAM")
+	stream := env.GetInput("STREAM")
 	if stream == "" {
 		return fmt.Errorf("STREAM is required")
 	}
 
-	cfile := gha.GetInput("CONFIG")
+	cfile := env.GetInput("CONFIG")
 	if cfile == "" {
 		return fmt.Errorf("CONFIG is required")
 	}
@@ -184,7 +185,7 @@ func handleUpdateStream() error {
 	if err != nil {
 		return err
 	}
-	gha.SetOutput("config", string(cj))
+	env.SetOutput("config", string(cj))
 
 	log.Printf("Configuration: %s", string(cj))
 
@@ -192,17 +193,17 @@ func handleUpdateStream() error {
 }
 
 func handleDeleteConsumer() error {
-	stream := gha.GetInput("STREAM")
+	stream := env.GetInput("STREAM")
 	if stream == "" {
 		return fmt.Errorf("STREAM is required")
 	}
 
-	consumer := gha.GetInput("CONSUMER")
+	consumer := env.GetInput("CONSUMER")
 	if consumer == "" {
 		return fmt.Errorf("CONSUMER is required")
 	}
 
-	missingok, err := strconv.ParseBool(gha.GetInput("MISSING_OK"))
+	missingok, err := strconv.ParseBool(env.GetInput("MISSING_OK"))
 	if err != nil {
 		missingok = false
 	}
@@ -224,7 +225,7 @@ func handleDeleteConsumer() error {
 	}
 
 	if !known {
-		gha.Fatalf("Stream %s does not exist", stream)
+		return fmt.Errorf("stream %s does not exist", stream)
 	}
 
 	known, err = jsm.IsKnownConsumer(stream, consumer, jsm.WithConnection(nc))
@@ -238,7 +239,7 @@ func handleDeleteConsumer() error {
 	}
 
 	if !known {
-		gha.Fatalf("Consumer %s > %s does not exist", stream, consumer)
+		return fmt.Errorf("consumer %s > %s does not exist", stream, consumer)
 	}
 
 	cons, err := jsm.LoadConsumer(stream, consumer, jsm.WithConnection(nc))
@@ -250,12 +251,12 @@ func handleDeleteConsumer() error {
 }
 
 func handleDeleteStream() error {
-	stream := gha.GetInput("STREAM")
+	stream := env.GetInput("STREAM")
 	if stream == "" {
 		return fmt.Errorf("STREAM is required")
 	}
 
-	missingok, err := strconv.ParseBool(gha.GetInput("MISSING_OK"))
+	missingok, err := strconv.ParseBool(env.GetInput("MISSING_OK"))
 	if err != nil {
 		missingok = false
 	}
@@ -277,7 +278,7 @@ func handleDeleteStream() error {
 	}
 
 	if !known {
-		gha.Fatalf("Stream %s does not exist, cannot delete it", stream)
+		return fmt.Errorf("stream %s does not exist, cannot delete it", stream)
 	}
 
 	str, err := jsm.LoadStream(stream, jsm.WithConnection(nc))
@@ -289,7 +290,7 @@ func handleDeleteStream() error {
 }
 
 func handleCreateStream() error {
-	cfile := gha.GetInput("CONFIG")
+	cfile := env.GetInput("CONFIG")
 	if cfile == "" {
 		return fmt.Errorf("CONFIG is required")
 	}
@@ -320,7 +321,7 @@ func handleCreateStream() error {
 	if err != nil {
 		return err
 	}
-	gha.SetOutput("config", string(cj))
+	env.SetOutput("config", string(cj))
 
 	log.Printf("Configuration: %s", string(cj))
 
@@ -328,12 +329,12 @@ func handleCreateStream() error {
 }
 
 func handleCreateConsumer() error {
-	cfile := gha.GetInput("CONFIG")
+	cfile := env.GetInput("CONFIG")
 	if cfile == "" {
 		return fmt.Errorf("CONFIG is required")
 	}
 
-	stream := gha.GetInput("STREAM")
+	stream := env.GetInput("STREAM")
 	if stream == "" {
 		return fmt.Errorf("STREAM is required")
 	}
@@ -364,38 +365,11 @@ func handleCreateConsumer() error {
 	if err != nil {
 		return err
 	}
-	gha.SetOutput("config", string(cj))
+	env.SetOutput("config", string(cj))
 
 	log.Printf("Configuration: %s", string(cj))
 
 	return nil
-}
-
-func connect() (*nats.Conn, error) {
-	creds := gha.GetInput("CREDENTIALS")
-	user := gha.GetInput("USERNAME")
-	pass := gha.GetInput("PASSWORD")
-
-	server := gha.GetInput("SERVER")
-	if server == "" {
-		return nil, fmt.Errorf("SERVER is required")
-	}
-
-	opts := []nats.Option{
-		nats.ErrorHandler(func(_ *nats.Conn, _ *nats.Subscription, err error) {
-			gha.Fatalf("NATS Error: %s", err)
-		}),
-	}
-
-	if user != "" {
-		opts = append(opts, nats.UserInfo(user, pass))
-	}
-
-	if creds != "" {
-		opts = append(opts, nats.UserCredentials(creds))
-	}
-
-	return nats.Connect(server, opts...)
 }
 
 func handleValidateStreamConfig() error {
@@ -429,7 +403,7 @@ func handleValidateConsumerConfig() error {
 }
 
 func validateHelper(input string, cfg validatable) (string, bool, []string, error) {
-	cfile := gha.GetInput(input)
+	cfile := env.GetInput(input)
 	if cfile == "" {
 		return "", false, nil, fmt.Errorf("%s is required", input)
 	}
@@ -447,4 +421,65 @@ func validateHelper(input string, cfg validatable) (string, bool, []string, erro
 	ok, errs := cfg.Validate()
 
 	return cfile, ok, errs, nil
+}
+
+func connect() (*nats.Conn, error) {
+	creds := env.GetInput("CREDENTIALS")
+	user := env.GetInput("USERNAME")
+	pass := env.GetInput("PASSWORD")
+
+	server := env.GetInput("SERVER")
+	if server == "" {
+		return nil, fmt.Errorf("SERVER is required")
+	}
+
+	opts := []nats.Option{
+		nats.Name("jetstream-gh-action"),
+		nats.ErrorHandler(func(_ *nats.Conn, _ *nats.Subscription, err error) {
+			env.Fatalf("NATS Error: %s", err)
+		}),
+	}
+
+	if user != "" {
+		opts = append(opts, nats.UserInfo(user, pass))
+	}
+
+	if creds != "" {
+		opts = append(opts, nats.UserCredentials(creds))
+	}
+
+	return nats.Connect(server, opts...)
+}
+
+func register(command string, h handler) error {
+	_, ok := commands[command]
+	if ok {
+		return fmt.Errorf("already registered")
+	}
+
+	commands[command] = h
+
+	return nil
+}
+
+func mustRegister(command string, h handler) {
+	err := register(command, h)
+	if err != nil {
+		env.Fatalf("Could not register '%s': %s", command, err)
+	}
+}
+
+func runAction() {
+	command := env.GetInput("COMMAND")
+	env.Debugf("Running command: %s", command)
+
+	cmd, ok := commands[command]
+	if !ok {
+		env.Fatalf("Unknown command %s", command)
+	}
+
+	err := cmd()
+	if err != nil {
+		env.Fatalf("Could not run command %s: %s", command, err)
+	}
 }
