@@ -1,0 +1,12 @@
+{
+  "delivery_subject": "",
+  "durable_name": "NEW",
+  "start_time": "0001-01-01T00:00:00Z",
+  "deliver_policy": "all",
+  "ack_policy": "explicit",
+  "ack_wait": 30000000000,
+  "max_deliver": -1,
+  "filter_subject": "ORDERS.received",
+  "replay_policy": "instant",
+  "sample_freq": "100"
+}
