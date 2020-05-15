@@ -4,12 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/nats-io/jsm.go"
 	"github.com/nats-io/jsm.go/api"
 	"github.com/nats-io/nats.go"
@@ -26,6 +27,7 @@ type environment interface {
 	SetOutput(string, string) error
 	Fatalf(string, ...interface{})
 	Debugf(string, ...interface{})
+	Printf(string, ...interface{})
 }
 
 var (
@@ -38,12 +40,8 @@ func main() {
 	case os.Getenv("GITHUB_ACTIONS") == "true":
 		env = github{}
 
-	case os.Getenv("TEKTON") == "true":
-		env = tekton{}
-
 	default:
-		panic("Cannot determine execution environment")
-
+		env = stdout{}
 	}
 
 	mustRegister("VALIDATE_STREAM_CONFIG", handleValidateStreamConfig)
@@ -72,12 +70,13 @@ func handlePurgeStream() error {
 	if err != nil {
 		return err
 	}
-	log.Printf("Connected to %s", nc.ConnectedUrl())
 
+	env.Printf("Purged Stream %q", stream)
 	str, err := jsm.LoadStream(stream, jsm.WithConnection(nc))
 	if err != nil {
 		return err
 	}
+	env.Printf("Purged Stream %q", stream)
 
 	return str.Purge()
 }
@@ -103,9 +102,8 @@ func handlePublish() error {
 		return err
 	}
 
-	log.Printf("Connected to %s", nc.ConnectedUrl())
-
 	if shouldAck {
+		env.Printf("Publishing %d bytes to %q and waiting for acknowledgement", len(msg), subj)
 		resp, err := nc.Request(subj, []byte(msg), 5*time.Second)
 		if err != nil {
 			env.SetOutput("response", err.Error())
@@ -117,13 +115,14 @@ func handlePublish() error {
 			return fmt.Errorf("publish failed: %s", string(resp.Data))
 		}
 
-		log.Println(string(resp.Data))
+		env.Printf(string(resp.Data))
 
 		env.SetOutput("response", string(resp.Data))
 
 		return nil
 	}
 
+	env.Printf("Publishing %d bytes to %q", len(msg), subj)
 	err = nc.Publish(subj, []byte(msg))
 	if err != nil {
 		env.SetOutput("response", err.Error())
@@ -167,11 +166,25 @@ func handleUpdateStream() error {
 	if err != nil {
 		return err
 	}
-	log.Printf("Connected to %s", nc.ConnectedUrl())
 
 	str, err := jsm.LoadStream(stream, jsm.WithConnection(nc))
 	if err != nil {
 		return err
+	}
+
+	// sorts strings to subject lists that only differ in ordering is considered equal
+	sorter := cmp.Transformer("Sort", func(in []string) []string {
+		out := append([]string(nil), in...)
+		sort.Strings(out)
+		return out
+	})
+
+	diff := cmp.Diff(str.Configuration(), cfg, sorter)
+	if diff != "" {
+		env.Printf("Differences (-old +new):\n%s", diff)
+	} else {
+		env.Printf("No difference")
+		return nil
 	}
 
 	err = str.UpdateConfiguration(cfg)
@@ -187,7 +200,7 @@ func handleUpdateStream() error {
 	}
 	env.SetOutput("config", string(cj))
 
-	log.Printf("Configuration: %s", string(cj))
+	env.Printf("Updated Stream %q with configuration: %s", stream, string(cj))
 
 	return nil
 }
@@ -212,7 +225,6 @@ func handleDeleteConsumer() error {
 	if err != nil {
 		return err
 	}
-	log.Printf("Connected to %s", nc.ConnectedUrl())
 
 	known, err := jsm.IsKnownStream(stream, jsm.WithConnection(nc))
 	if err != nil {
@@ -220,7 +232,7 @@ func handleDeleteConsumer() error {
 	}
 
 	if missingok && !known {
-		log.Printf("Stream %s was not present", stream)
+		env.Printf("Stream %s was not present", stream)
 		return nil
 	}
 
@@ -234,7 +246,7 @@ func handleDeleteConsumer() error {
 	}
 
 	if missingok && !known {
-		log.Printf("Consumer %s > %s was not present", stream, consumer)
+		env.Printf("Consumer %s > %s was not present", stream, consumer)
 		return nil
 	}
 
@@ -247,7 +259,14 @@ func handleDeleteConsumer() error {
 		return err
 	}
 
-	return cons.Delete()
+	err = cons.Delete()
+	if err != nil {
+		return err
+	}
+
+	env.Printf("Deleted consumer %s > %s", stream, consumer)
+
+	return nil
 }
 
 func handleDeleteStream() error {
@@ -265,7 +284,6 @@ func handleDeleteStream() error {
 	if err != nil {
 		return err
 	}
-	log.Printf("Connected to %s", nc.ConnectedUrl())
 
 	known, err := jsm.IsKnownStream(stream, jsm.WithConnection(nc))
 	if err != nil {
@@ -273,7 +291,7 @@ func handleDeleteStream() error {
 	}
 
 	if missingok && !known {
-		log.Printf("Stream %s was not present", stream)
+		env.Printf("Stream %s was not present", stream)
 		return nil
 	}
 
@@ -286,7 +304,14 @@ func handleDeleteStream() error {
 		return err
 	}
 
-	return str.Delete()
+	err = str.Delete()
+	if err != nil {
+		return err
+	}
+
+	env.Printf("Deleted stream %q", stream)
+
+	return nil
 }
 
 func handleCreateStream() error {
@@ -310,7 +335,6 @@ func handleCreateStream() error {
 	if err != nil {
 		return err
 	}
-	log.Printf("Connected to %s", nc.ConnectedUrl())
 
 	stream, err := jsm.NewStreamFromDefault(cfg.Name, cfg, jsm.StreamConnection(jsm.WithConnection(nc)))
 	if err != nil {
@@ -323,7 +347,7 @@ func handleCreateStream() error {
 	}
 	env.SetOutput("config", string(cj))
 
-	log.Printf("Configuration: %s", string(cj))
+	env.Printf("Created stream %q\n\n%s", cfg.Name, string(cj))
 
 	return nil
 }
@@ -354,7 +378,6 @@ func handleCreateConsumer() error {
 	if err != nil {
 		return err
 	}
-	log.Printf("Connected to %s", nc.ConnectedUrl())
 
 	consumer, err := jsm.NewConsumerFromDefault(stream, cfg, jsm.ConsumerConnection(jsm.WithConnection(nc)))
 	if err != nil {
@@ -367,7 +390,7 @@ func handleCreateConsumer() error {
 	}
 	env.SetOutput("config", string(cj))
 
-	log.Printf("Configuration: %s", string(cj))
+	env.Printf("Created consumer %q > %q\n\n%s", stream, consumer.Name(), string(cj))
 
 	return nil
 }
@@ -380,7 +403,7 @@ func handleValidateStreamConfig() error {
 	}
 
 	if valid {
-		log.Printf("%s is a valid Stream Configuration", cfile)
+		env.Printf("%s is a valid Stream Configuration", cfile)
 		return nil
 	}
 
@@ -395,7 +418,7 @@ func handleValidateConsumerConfig() error {
 	}
 
 	if valid {
-		log.Printf("%s is a valid Consumer Configuration", cfile)
+		env.Printf("%s is a valid Consumer Configuration", cfile)
 		return nil
 	}
 
@@ -448,7 +471,13 @@ func connect() (*nats.Conn, error) {
 		opts = append(opts, nats.UserCredentials(creds))
 	}
 
-	return nats.Connect(server, opts...)
+	env.Debugf("Attempting to connect to %q", server)
+	nc, err := nats.Connect(server, opts...)
+	if err == nil {
+		env.Debugf("Connected to %q", nc.ConnectedUrl())
+	}
+
+	return nc, err
 }
 
 func register(command string, h handler) error {
