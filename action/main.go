@@ -57,7 +57,10 @@ func main() {
 	mustRegister("PURGE_STREAM", handlePurgeStream)
 	mustRegister("PUBLISH", handlePublish)
 
-	runAction()
+	err := runAction()
+	if err != nil {
+		env.Fatalf("Command failed: %s", err)
+	}
 }
 
 func handlePurgeStream() error {
@@ -71,7 +74,7 @@ func handlePurgeStream() error {
 		return err
 	}
 
-	env.Printf("Purged Stream %q", stream)
+	env.Printf("Purging Stream %q", stream)
 	str, err := jsm.LoadStream(stream, jsm.WithConnection(nc))
 	if err != nil {
 		return err
@@ -192,7 +195,10 @@ func handleUpdateStream() error {
 		return err
 	}
 
-	str.Reset()
+	err = str.Reset()
+	if err != nil {
+		return err
+	}
 
 	cj, err = json.Marshal(str.Configuration())
 	if err != nil {
@@ -474,7 +480,7 @@ func connect() (*nats.Conn, error) {
 	env.Debugf("Attempting to connect to %q", server)
 	nc, err := nats.Connect(server, opts...)
 	if err == nil {
-		env.Debugf("Connected to %q", nc.ConnectedUrl())
+		env.Printf("Connected to %q", nc.ConnectedUrl())
 	}
 
 	return nc, err
@@ -498,17 +504,26 @@ func mustRegister(command string, h handler) {
 	}
 }
 
-func runAction() {
+func runAction() error {
+	start := time.Now()
 	command := env.GetInput("COMMAND")
-	env.Debugf("Running command: %s", command)
+
+	defer func() {
+		elapsed := time.Now().Sub(start)
+		env.Printf("Ran %q in %v", command, elapsed)
+	}()
+
+	env.Printf("Starting NATS JetStream Action Pack command %q", command)
 
 	cmd, ok := commands[command]
 	if !ok {
-		env.Fatalf("Unknown command %s", command)
+		return fmt.Errorf("unknown command %s", command)
 	}
 
 	err := cmd()
 	if err != nil {
-		env.Fatalf("Could not run command %s: %s", command, err)
+		return err
 	}
+
+	return nil
 }

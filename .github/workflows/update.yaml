@@ -1,0 +1,29 @@
+on:
+  - pull_request
+  - push
+
+name: update
+jobs:
+  test_update:
+    runs-on: ubuntu-latest
+    services:
+      jetstream:
+        image: synadia/jsm:latest
+        options: >-
+          -e JSM_MODE=server
+
+    steps:
+      - uses: actions/checkout@master
+
+      - name: create_orders_stream
+        uses: nats-io/jetstream-gh-action/create/stream@master
+        with:
+          config: action/testdata/ORDERS.json
+          server: jetstream
+
+      - name: update_orders_stream
+        uses: nats-io/jetstream-gh-action/update/stream@master
+        with:
+          stream: ORDERS
+          config: action/testdata/ORDERS-update.json
+          server: jetstream

@@ -1,7 +1,10 @@
 package main
 
 import (
-	"log"
+	"bufio"
+	"fmt"
+	"os"
+	"time"
 
 	gha "github.com/sethvargo/go-githubactions"
 )
@@ -26,5 +29,8 @@ func (g github) Debugf(msg string, args ...interface{}) {
 }
 
 func (g github) Printf(msg string, args ...interface{}) {
-	log.Printf(msg, args...)
+	f := bufio.NewWriter(os.Stdout)
+	defer f.Flush()
+
+	fmt.Fprintf(f, time.Now().Format("15:04:05.000000")+": "+msg+"\n", args...)
 }
