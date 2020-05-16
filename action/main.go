@@ -93,6 +93,8 @@ func handleEvalStream() error {
 		return err
 	}
 
+	env.Printf("Stream State: %+v", info)
+
 	eval, err := bexpr.CreateEvaluatorForType(expr, nil, info)
 	if err != nil {
 		return err
@@ -146,6 +148,8 @@ func handleEvalConsumer() error {
 	if err != nil {
 		return err
 	}
+
+	env.Printf("Consumer State: %+v", info)
 
 	eval, err := bexpr.CreateEvaluatorForType(expr, nil, info)
 	if err != nil {
