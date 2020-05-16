@@ -14,7 +14,6 @@ This is a collection of [GitHub Actions](https://github.com/features/actions) to
 |[nats-io/jetstream-gh-action/eval/stream@master](https://github.com/nats-io/jetstream-gh-action/tree/master/eval/stream)|Evaluate Stream state|
 |[nats-io/jetstream-gh-action/eval/consumer@master](https://github.com/nats-io/jetstream-gh-action/tree/master/eval/consumer)|Evaluate Consumer state|
 |[nats-io/jetstream-gh-action/purge/stream@master](https://github.com/nats-io/jetstream-gh-action/tree/master/purge/stream)|Purge all data from a Stream|
-
 |[nats-io/jetstream-gh-action@master](https://github.com/nats-io/jetstream-gh-action/)|Publish to a JetStream Stream|
 
 See individual action directory for detailed usage instructions.
