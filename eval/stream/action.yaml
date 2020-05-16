@@ -1,0 +1,40 @@
+name: "NATS JetStream Stream State Evaluator"
+description: "Evaluate state of a NATS JetStream Stream"
+author: "R.I.Pienaar"
+branding:
+  icon: "check"
+  color: "green"
+
+inputs:
+  stream:
+    description: "The Stream to evaluate"
+    required: true
+
+  expression:
+    description: "The check to perform on the Stream state"
+    required: true
+
+  server:
+    description: "The URL of the NATS Server to connect to"
+    required: true
+
+  username:
+    description: "The username to connect with"
+    required: false
+
+  password:
+    description: "The password to connect with"
+    required: false
+
+  credentials:
+    description: "The credentials file to connect with"
+    required: false
+
+  command:
+    description: "The command to run within the container"
+    required: false
+    default: EVAL_STREAM
+
+runs:
+  using: 'docker'
+  image: 'docker://synadia/jetstream-gh-action:latest'

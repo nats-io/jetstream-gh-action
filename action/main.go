@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/hashicorp/go-bexpr"
 	"github.com/nats-io/jsm.go"
 	"github.com/nats-io/jsm.go/api"
 	"github.com/nats-io/nats.go"
@@ -57,10 +58,111 @@ func main() {
 	mustRegister("PURGE_STREAM", handlePurgeStream)
 	mustRegister("PUBLISH", handlePublish)
 
+	mustRegister("EVAL_STREAM", handleEvalStream)
+	mustRegister("EVAL_CONSUMER", handleEvalConsumer)
+
 	err := runAction()
 	if err != nil {
 		env.Fatalf("Command failed: %s", err)
 	}
+}
+
+func handleEvalStream() error {
+	stream := env.GetInput("STREAM")
+	if stream == "" {
+		return fmt.Errorf("STREAM is required")
+	}
+
+	expr := env.GetInput("EXPRESSION")
+	if expr == "" {
+		return fmt.Errorf("EXPRESSOIN is required")
+	}
+
+	nc, err := connect()
+	if err != nil {
+		return err
+	}
+
+	str, err := jsm.LoadStream(stream, jsm.WithConnection(nc))
+	if err != nil {
+		return err
+	}
+
+	info, err := str.Information()
+	if err != nil {
+		return err
+	}
+
+	eval, err := bexpr.CreateEvaluatorForType(expr, nil, info)
+	if err != nil {
+		return err
+	}
+
+	result, err := eval.Evaluate(info)
+	if err != nil {
+		return err
+	}
+
+	if result {
+		env.Printf("stream %q state matched %q", stream, expr)
+		return nil
+	}
+
+	return fmt.Errorf("stream %q state did not match %q", stream, expr)
+}
+
+func handleEvalConsumer() error {
+	stream := env.GetInput("STREAM")
+	if stream == "" {
+		return fmt.Errorf("STREAM is required")
+	}
+
+	consumer := env.GetInput("CONSUMER")
+	if consumer == "" {
+		return fmt.Errorf("CONSUMER is required")
+	}
+
+	expr := env.GetInput("EXPRESSION")
+	if expr == "" {
+		return fmt.Errorf("EXPRESSOIN is required")
+	}
+
+	nc, err := connect()
+	if err != nil {
+		return err
+	}
+
+	str, err := jsm.LoadStream(stream, jsm.WithConnection(nc))
+	if err != nil {
+		return err
+	}
+
+	cons, err := str.LoadConsumer(consumer)
+	if err != nil {
+		return err
+	}
+
+	info, err := cons.State()
+	if err != nil {
+		return err
+	}
+
+	eval, err := bexpr.CreateEvaluatorForType(expr, nil, info)
+	if err != nil {
+		return err
+	}
+
+	result, err := eval.Evaluate(info)
+	if err != nil {
+		return err
+	}
+
+	if result {
+		env.Printf("consumer %s > %s state matched %q", stream, consumer, expr)
+		return nil
+	}
+
+	return fmt.Errorf("consumer %s > %s state did not match %q", stream, consumer, expr)
 }
 
 func handlePurgeStream() error {

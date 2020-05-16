@@ -15,12 +15,14 @@ jobs:
     steps:
       - uses: actions/checkout@master
 
+      # Create a typical ORDERS stream
       - name: create_orders_stream
         uses: nats-io/jetstream-gh-action/create/stream@master
         with:
           config: action/testdata/ORDERS.json
           server: jetstream
 
+      # Create a NEW consumer on ORDERS
       - name: create_new_consumer
         uses: nats-io/jetstream-gh-action/create/consumer@master
         with:
@@ -28,6 +30,7 @@ jobs:
           config: action/testdata/ORDERS_NEW.json
           server: jetstream
 
+      # Publish a message to the stream and expect it to ack
       - name: publish_order
         uses: nats-io/jetstream-gh-action@master
         with:
@@ -36,12 +39,30 @@ jobs:
           should_ack: 1
           server: jetstream
 
+      # We make sure that the Stream now holds 1 message
+      - name: check_stream_size
+        uses: nats-io/jetstream-gh-action/eval/stream@master
+        with:
+          stream: ORDERS
+          expression: State.Msgs == 1
+          server: jetstream
+
+      # We purge all the messages in the stream
       - name: purge_orders
         uses: nats-io/jetstream-gh-action/purge/stream@master
         with:
           stream: ORDERS
           server: jetstream
 
+      # Now the stream should hold no messages
+      - name: check_stream_size
+        uses: nats-io/jetstream-gh-action/eval/stream@master
+        with:
+          stream: ORDERS
+          expression: State.Msgs == 0
+          server: jetstream
+
+      # And finally we delete the consumer
       - name: delete_orders_new_consumer
         uses: nats-io/jetstream-gh-action/delete/consumer@master
         with:
@@ -49,6 +70,7 @@ jobs:
           consumer: NEW
           server: jetstream
 
+      # and the Stream
       - name: delete_orders_stream
         uses: nats-io/jetstream-gh-action/delete/stream@master
         with:
