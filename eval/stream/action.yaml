@@ -11,7 +11,7 @@ inputs:
     required: true
 
   expression:
-    description: "The check to perform on the Stream state"
+    description: "The checks to perform on the Stream state, 1 check per line"
     required: true
 
   server:

@@ -44,7 +44,9 @@ jobs:
         uses: nats-io/jetstream-gh-action/eval/stream@master
         with:
           stream: ORDERS
-          expression: State.Msgs == 1
+          expression: |
+            State.Msgs == 1
+            Config.Storage == 1
           server: jetstream
 
       # We purge all the messages in the stream

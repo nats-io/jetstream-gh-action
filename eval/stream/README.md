@@ -52,7 +52,9 @@ jobs:
         uses: nats-io/jetstream-gh-action/update/stream@master
         with:
           stream: ORDERS
-          expression: State.Msgs == 100
+          expression: |
+            State.Msgs == 1
+            Config.Storage == 1
           server: nats.example.net:4222
 ```
 

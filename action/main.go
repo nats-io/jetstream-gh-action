@@ -93,24 +93,34 @@ func handleEvalStream() error {
 		return err
 	}
 
-	env.Printf("Stream State: %+v", info)
+	env.Printf("Stream State: %#v", info)
+	var failures []string
 
-	eval, err := bexpr.CreateEvaluatorForType(expr, nil, info)
-	if err != nil {
-		return err
+	for _, e := range strings.Split(expr, "\n") {
+		eval, err := bexpr.CreateEvaluatorForType(e, nil, info)
+		if err != nil {
+			return err
+		}
+
+		result, err := eval.Evaluate(info)
+		if err != nil {
+			return err
+		}
+
+		if result {
+			env.Printf("stream %q state matched %q", stream, e)
+			continue
+		}
+
+		failures = append(failures, e)
+		return fmt.Errorf("stream %q state did not match %q", stream, e)
 	}
 
-	result, err := eval.Evaluate(info)
-	if err != nil {
-		return err
+	if len(failures) > 0 {
+		return fmt.Errorf("stream state did not match %d expressions:\n\t%s", len(failures), strings.Join(failures, "\n\t"))
 	}
 
-	if result {
-		env.Printf("stream %q state matched %q", stream, expr)
-		return nil
-	}
-
-	return fmt.Errorf("stream %q state did not match %q", stream, expr)
+	return nil
 }
 
 func handleEvalConsumer() error {
@@ -149,24 +159,34 @@ func handleEvalConsumer() error {
 		return err
 	}
 
-	env.Printf("Consumer State: %+v", info)
+	env.Printf("Consumer State: %#v", info)
+	var failures []string
 
-	eval, err := bexpr.CreateEvaluatorForType(expr, nil, info)
-	if err != nil {
-		return err
+	for _, e := range strings.Split(expr, "\n") {
+		eval, err := bexpr.CreateEvaluatorForType(e, nil, info)
+		if err != nil {
+			return err
+		}
+
+		result, err := eval.Evaluate(info)
+		if err != nil {
+			return err
+		}
+
+		if result {
+			env.Printf("consumer %q > %q state matched %q", stream, consumer, e)
+			continue
+		}
+
+		failures = append(failures, e)
+		return fmt.Errorf("consumer %q > %q state did not match %q", stream, consumer, e)
 	}
 
-	result, err := eval.Evaluate(info)
-	if err != nil {
-		return err
+	if len(failures) > 0 {
+		return fmt.Errorf("consumer state did not match %d expressions:\n\t%s", len(failures), strings.Join(failures, "\n\t"))
 	}
 
-	if result {
-		env.Printf("consumer %s > %s state matched %q", stream, consumer, expr)
-		return nil
-	}
-
-	return fmt.Errorf("consumer %s > %s state did not match %q", stream, consumer, expr)
+	return nil
 }
 
 func handlePurgeStream() error {
@@ -459,7 +479,7 @@ func handleCreateStream() error {
 	}
 	env.SetOutput("config", string(cj))
 
-	env.Printf("Created stream %q\n\n%s", cfg.Name, string(cj))
+	env.Printf("Created stream %q using %q\n%s", cfg.Name, cfile, string(cj))
 
 	return nil
 }
@@ -502,7 +522,7 @@ func handleCreateConsumer() error {
 	}
 	env.SetOutput("config", string(cj))
 
-	env.Printf("Created consumer %q > %q\n\n%s", stream, consumer.Name(), string(cj))
+	env.Printf("Created consumer %q > %q using %q\n%s", stream, consumer.Name(), cfile, string(cj))
 
 	return nil
 }
