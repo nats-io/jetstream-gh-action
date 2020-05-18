@@ -15,7 +15,7 @@ func (s stdout) GetInput(k string) string {
 }
 
 func (s stdout) SetOutput(k string, v string) error {
-	return ioutil.WriteFile(filepath.Join("/worksspace/output", k, "output.txt"), []byte(v), 0644)
+	return ioutil.WriteFile(filepath.Join("/workspace/output", k, "output.txt"), []byte(v), 0644)
 }
 
 func (s stdout) Fatalf(msg string, args ...interface{}) {
