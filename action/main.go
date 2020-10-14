@@ -609,7 +609,7 @@ func connect() (*nats.Conn, *jsm.Manager, error) {
 		env.Printf("Connected to %q", nc.ConnectedUrl())
 	}
 
-	mgr, err := jsm.New(nc)
+	mgr, err := jsm.New(nc, jsm.WithAPIValidation(new(SchemaValidator)))
 	if err != nil {
 		return nil, nil, err
 	}
