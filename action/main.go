@@ -20,7 +20,7 @@ import (
 type handler func() error
 
 type validatable interface {
-	Validate() (bool, []string)
+	Validate(v ...api.StructValidator) (bool, []string)
 }
 
 type environment interface {
@@ -78,12 +78,12 @@ func handleEvalStream() error {
 		return fmt.Errorf("EXPRESSOIN is required")
 	}
 
-	nc, err := connect()
+	_, mgr, err := connect()
 	if err != nil {
 		return err
 	}
 
-	str, err := jsm.LoadStream(stream, jsm.WithConnection(nc))
+	str, err := mgr.LoadStream(stream)
 	if err != nil {
 		return err
 	}
@@ -139,12 +139,12 @@ func handleEvalConsumer() error {
 		return fmt.Errorf("EXPRESSOIN is required")
 	}
 
-	nc, err := connect()
+	_, mgr, err := connect()
 	if err != nil {
 		return err
 	}
 
-	str, err := jsm.LoadStream(stream, jsm.WithConnection(nc))
+	str, err := mgr.LoadStream(stream)
 	if err != nil {
 		return err
 	}
@@ -195,13 +195,13 @@ func handlePurgeStream() error {
 		return fmt.Errorf("STREAM is required")
 	}
 
-	nc, err := connect()
+	_, mgr, err := connect()
 	if err != nil {
 		return err
 	}
 
 	env.Printf("Purging Stream %q", stream)
-	str, err := jsm.LoadStream(stream, jsm.WithConnection(nc))
+	str, err := mgr.LoadStream(stream)
 	if err != nil {
 		return err
 	}
@@ -226,7 +226,7 @@ func handlePublish() error {
 		shouldAck = true
 	}
 
-	nc, err := connect()
+	nc, _, err := connect()
 	if err != nil {
 		return err
 	}
@@ -291,12 +291,12 @@ func handleUpdateStream() error {
 		return err
 	}
 
-	nc, err := connect()
+	_, mgr, err := connect()
 	if err != nil {
 		return err
 	}
 
-	str, err := jsm.LoadStream(stream, jsm.WithConnection(nc))
+	str, err := mgr.LoadStream(stream)
 	if err != nil {
 		return err
 	}
@@ -353,12 +353,12 @@ func handleDeleteConsumer() error {
 		missingok = false
 	}
 
-	nc, err := connect()
+	_, mgr, err := connect()
 	if err != nil {
 		return err
 	}
 
-	known, err := jsm.IsKnownStream(stream, jsm.WithConnection(nc))
+	known, err := mgr.IsKnownStream(stream)
 	if err != nil {
 		return err
 	}
@@ -372,7 +372,7 @@ func handleDeleteConsumer() error {
 		return fmt.Errorf("stream %s does not exist", stream)
 	}
 
-	known, err = jsm.IsKnownConsumer(stream, consumer, jsm.WithConnection(nc))
+	known, err = mgr.IsKnownConsumer(stream, consumer)
 	if err != nil {
 		return err
 	}
@@ -386,7 +386,7 @@ func handleDeleteConsumer() error {
 		return fmt.Errorf("consumer %s > %s does not exist", stream, consumer)
 	}
 
-	cons, err := jsm.LoadConsumer(stream, consumer, jsm.WithConnection(nc))
+	cons, err := mgr.LoadConsumer(stream, consumer)
 	if err != nil {
 		return err
 	}
@@ -412,12 +412,12 @@ func handleDeleteStream() error {
 		missingok = false
 	}
 
-	nc, err := connect()
+	_, mgr, err := connect()
 	if err != nil {
 		return err
 	}
 
-	known, err := jsm.IsKnownStream(stream, jsm.WithConnection(nc))
+	known, err := mgr.IsKnownStream(stream)
 	if err != nil {
 		return err
 	}
@@ -431,7 +431,7 @@ func handleDeleteStream() error {
 		return fmt.Errorf("stream %s does not exist, cannot delete it", stream)
 	}
 
-	str, err := jsm.LoadStream(stream, jsm.WithConnection(nc))
+	str, err := mgr.LoadStream(stream)
 	if err != nil {
 		return err
 	}
@@ -463,12 +463,12 @@ func handleCreateStream() error {
 		return err
 	}
 
-	nc, err := connect()
+	_, mgr, err := connect()
 	if err != nil {
 		return err
 	}
 
-	stream, err := jsm.NewStreamFromDefault(cfg.Name, cfg, jsm.StreamConnection(jsm.WithConnection(nc)))
+	stream, err := mgr.NewStreamFromDefault(cfg.Name, cfg)
 	if err != nil {
 		return err
 	}
@@ -506,12 +506,12 @@ func handleCreateConsumer() error {
 		return err
 	}
 
-	nc, err := connect()
+	_, mgr, err := connect()
 	if err != nil {
 		return err
 	}
 
-	consumer, err := jsm.NewConsumerFromDefault(stream, cfg, jsm.ConsumerConnection(jsm.WithConnection(nc)))
+	consumer, err := mgr.NewConsumerFromDefault(stream, cfg)
 	if err != nil {
 		return err
 	}
@@ -578,14 +578,14 @@ func validateHelper(input string, cfg validatable) (string, bool, []string, erro
 	return cfile, ok, errs, nil
 }
 
-func connect() (*nats.Conn, error) {
+func connect() (*nats.Conn, *jsm.Manager, error) {
 	creds := env.GetInput("CREDENTIALS")
 	user := env.GetInput("USERNAME")
 	pass := env.GetInput("PASSWORD")
 
 	server := env.GetInput("SERVER")
 	if server == "" {
-		return nil, fmt.Errorf("SERVER is required")
+		return nil, nil, fmt.Errorf("SERVER is required")
 	}
 
 	opts := []nats.Option{
@@ -609,7 +609,12 @@ func connect() (*nats.Conn, error) {
 		env.Printf("Connected to %q", nc.ConnectedUrl())
 	}
 
-	return nc, err
+	mgr, err := jsm.New(nc)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return nc, mgr, err
 }
 
 func register(command string, h handler) error {
