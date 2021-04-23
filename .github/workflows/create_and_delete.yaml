@@ -13,18 +13,18 @@ jobs:
           -e JSM_MODE=server
 
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@main
 
       # Create a typical ORDERS stream
       - name: create_orders_stream
-        uses: nats-io/jetstream-gh-action/create/stream@master
+        uses: nats-io/jetstream-gh-action/create/stream@main
         with:
           config: action/testdata/ORDERS.json
           server: jetstream
 
       # Create a NEW consumer on ORDERS
       - name: create_new_consumer
-        uses: nats-io/jetstream-gh-action/create/consumer@master
+        uses: nats-io/jetstream-gh-action/create/consumer@main
         with:
           stream: ORDERS
           config: action/testdata/ORDERS_NEW.json
@@ -32,7 +32,7 @@ jobs:
 
       # Publish a message to the stream and expect it to ack
       - name: publish_order
-        uses: nats-io/jetstream-gh-action@master
+        uses: nats-io/jetstream-gh-action@main
         with:
           subject: ORDERS.test
           message: Published new deployment via "${{ github.event_name }}" in "${{ github.repository }}"
@@ -41,7 +41,7 @@ jobs:
 
       # We make sure that the Stream now holds 1 message
       - name: check_stream_size
-        uses: nats-io/jetstream-gh-action/eval/stream@master
+        uses: nats-io/jetstream-gh-action/eval/stream@main
         with:
           stream: ORDERS
           expression: |
@@ -51,14 +51,14 @@ jobs:
 
       # We purge all the messages in the stream
       - name: purge_orders
-        uses: nats-io/jetstream-gh-action/purge/stream@master
+        uses: nats-io/jetstream-gh-action/purge/stream@main
         with:
           stream: ORDERS
           server: jetstream
 
       # Now the stream should hold no messages
       - name: check_stream_size
-        uses: nats-io/jetstream-gh-action/eval/stream@master
+        uses: nats-io/jetstream-gh-action/eval/stream@main
         with:
           stream: ORDERS
           expression: State.Msgs == 0
@@ -66,7 +66,7 @@ jobs:
 
       # And finally we delete the consumer
       - name: delete_orders_new_consumer
-        uses: nats-io/jetstream-gh-action/delete/consumer@master
+        uses: nats-io/jetstream-gh-action/delete/consumer@main
         with:
           stream: ORDERS
           consumer: NEW
@@ -74,7 +74,7 @@ jobs:
 
       # and the Stream
       - name: delete_orders_stream
-        uses: nats-io/jetstream-gh-action/delete/stream@master
+        uses: nats-io/jetstream-gh-action/delete/stream@main
         with:
           stream: ORDERS
           server: jetstream

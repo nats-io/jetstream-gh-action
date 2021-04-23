@@ -13,16 +13,16 @@ jobs:
           -e JSM_MODE=server
 
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@main
 
       - name: create_orders_stream
-        uses: nats-io/jetstream-gh-action/create/stream@master
+        uses: nats-io/jetstream-gh-action/create/stream@main
         with:
           config: action/testdata/ORDERS.json
           server: jetstream
 
       - name: update_orders_stream
-        uses: nats-io/jetstream-gh-action/update/stream@master
+        uses: nats-io/jetstream-gh-action/update/stream@main
         with:
           stream: ORDERS
           config: action/testdata/ORDERS-update.json
