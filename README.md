@@ -4,17 +4,17 @@ This is a collection of [GitHub Actions](https://github.com/features/actions) to
 
 |Action|Description|
 |------|-----------|
-|[nats-io/jetstream-gh-action/validate/stream@master](https://github.com/nats-io/jetstream-gh-action/tree/master/validate/stream)|Validates Stream Configuration|
-|[nats-io/jetstream-gh-action/validate/consumer@master](https://github.com/nats-io/jetstream-gh-action/tree/master/validate/consumer)|Validates Consumer Configuration|
-|[nats-io/jetstream-gh-action/create/stream@master](https://github.com/nats-io/jetstream-gh-action/tree/master/create/stream)|Creates Streams|
-|[nats-io/jetstream-gh-action/create/consumer@master](https://github.com/nats-io/jetstream-gh-action/tree/master/create/consumer)|Creates Consumers|
-|[nats-io/jetstream-gh-action/update/stream@master](https://github.com/nats-io/jetstream-gh-action/tree/master/update/stream)|Updates Streams|
-|[nats-io/jetstream-gh-action/delete/stream@master](https://github.com/nats-io/jetstream-gh-action/tree/master/delete/stream)|Deletes Streams|
-|[nats-io/jetstream-gh-action/delete/consumer@master](https://github.com/nats-io/jetstream-gh-action/tree/master/delete/consumer)|Deletes Consumers|
-|[nats-io/jetstream-gh-action/eval/stream@master](https://github.com/nats-io/jetstream-gh-action/tree/master/eval/stream)|Evaluate Stream state|
-|[nats-io/jetstream-gh-action/eval/consumer@master](https://github.com/nats-io/jetstream-gh-action/tree/master/eval/consumer)|Evaluate Consumer state|
-|[nats-io/jetstream-gh-action/purge/stream@master](https://github.com/nats-io/jetstream-gh-action/tree/master/purge/stream)|Purge all data from a Stream|
-|[nats-io/jetstream-gh-action@master](https://github.com/nats-io/jetstream-gh-action/)|Publish to a JetStream Stream|
+|[nats-io/jetstream-gh-action/validate/stream@main](https://github.com/nats-io/jetstream-gh-action/tree/main/validate/stream)|Validates Stream Configuration|
+|[nats-io/jetstream-gh-action/validate/consumer@main](https://github.com/nats-io/jetstream-gh-action/tree/main/validate/consumer)|Validates Consumer Configuration|
+|[nats-io/jetstream-gh-action/create/stream@main](https://github.com/nats-io/jetstream-gh-action/tree/main/create/stream)|Creates Streams|
+|[nats-io/jetstream-gh-action/create/consumer@main](https://github.com/nats-io/jetstream-gh-action/tree/main/create/consumer)|Creates Consumers|
+|[nats-io/jetstream-gh-action/update/stream@main](https://github.com/nats-io/jetstream-gh-action/tree/main/update/stream)|Updates Streams|
+|[nats-io/jetstream-gh-action/delete/stream@main](https://github.com/nats-io/jetstream-gh-action/tree/main/delete/stream)|Deletes Streams|
+|[nats-io/jetstream-gh-action/delete/consumer@main](https://github.com/nats-io/jetstream-gh-action/tree/main/delete/consumer)|Deletes Consumers|
+|[nats-io/jetstream-gh-action/eval/stream@main](https://github.com/nats-io/jetstream-gh-action/tree/main/eval/stream)|Evaluate Stream state|
+|[nats-io/jetstream-gh-action/eval/consumer@main](https://github.com/nats-io/jetstream-gh-action/tree/main/eval/consumer)|Evaluate Consumer state|
+|[nats-io/jetstream-gh-action/purge/stream@main](https://github.com/nats-io/jetstream-gh-action/tree/main/purge/stream)|Purge all data from a Stream|
+|[nats-io/jetstream-gh-action@main](https://github.com/nats-io/jetstream-gh-action/)|Publish to a JetStream Stream|
 
 See individual action directory for detailed usage instructions.
 
@@ -37,7 +37,7 @@ jobs:
 
       # creates a stream on the "jetstream:4222" server started above
       - name: orders_stream
-        uses: nats-io/jetstream-gh-action/create/stream@master
+        uses: nats-io/jetstream-gh-action/create/stream@main
         with:
           config: ORDERS.json
           server: jetstream:4222
@@ -58,9 +58,9 @@ jobs:
   consumer_validate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@main
       - name: hello
-        uses: nats-io/jetstream-gh-action@master
+        uses: nats-io/jetstream-gh-action@main
         with:
           subject: ORDERS.deploy
           message: Published new deployment via "${{ github.event_name }}" in "${{ github.repository }}"

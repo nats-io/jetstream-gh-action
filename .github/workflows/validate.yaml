@@ -6,11 +6,11 @@ jobs:
   bad_json_validate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@main
       - name: bad json
         id: bad_json
         continue-on-error: true
-        uses: nats-io/jetstream-gh-action/validate/stream@master
+        uses: nats-io/jetstream-gh-action/validate/stream@main
         with:
           config: action/testdata/bad-json.json
       - name: expect_failure
@@ -23,20 +23,20 @@ jobs:
   consumer_validate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@main
       - name: consumer
-        uses: nats-io/jetstream-gh-action/validate/consumer@master
+        uses: nats-io/jetstream-gh-action/validate/consumer@main
         with:
           config: action/testdata/consumer.json
 
   empty_json_validate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@main
       - name: empty json
         id: empty_json
         continue-on-error: true
-        uses: nats-io/jetstream-gh-action/validate/stream@master
+        uses: nats-io/jetstream-gh-action/validate/stream@main
         with:
           config: action/testdata/bad-json.json
       - name: expect_failure
@@ -49,8 +49,8 @@ jobs:
   stream_validate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@main
       - name: stream
-        uses: nats-io/jetstream-gh-action/validate/stream@master
+        uses: nats-io/jetstream-gh-action/validate/stream@main
         with:
           config: action/testdata/stream.json
