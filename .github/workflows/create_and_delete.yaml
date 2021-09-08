@@ -46,7 +46,7 @@ jobs:
           stream: ORDERS
           expression: |
             State.Msgs == 1
-            Config.Storage == 1
+            Config.Storage == 0
           server: jetstream
 
       # We purge all the messages in the stream
