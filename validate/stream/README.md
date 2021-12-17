@@ -13,9 +13,9 @@ jobs:
   stream_validate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@main
       - name: stream
-        uses: nats-io/jetstream-gh-action/validate/stream@master
+        uses: nats-io/jetstream-gh-action/validate/stream@main
         with:
           config: stream.json
 ```

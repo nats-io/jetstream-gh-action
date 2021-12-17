@@ -11,9 +11,9 @@ jobs:
   clean_orders:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@main
       - name: purge_orders
-        uses: nats-io/jetstream-gh-action/purge/stream@master
+        uses: nats-io/jetstream-gh-action/purge/stream@main
         with:
           stream: ORDERS
           server: nats.example.net:4222
