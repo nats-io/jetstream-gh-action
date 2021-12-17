@@ -13,9 +13,9 @@ jobs:
   consumer_validate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@main
       - name: consumer
-        uses: nats-io/jetstream-gh-action/validate/consumer@master
+        uses: nats-io/jetstream-gh-action/validate/consumer@main
         with:
           config: consumer.json
 ```

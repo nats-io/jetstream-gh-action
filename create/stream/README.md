@@ -11,14 +11,14 @@ jobs:
   create_orders:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@main
       - name: orders_stream
-        uses: nats-io/jetstream-gh-action/create/stream@master
+        uses: nats-io/jetstream-gh-action/create/stream@main
         with:
           config: ORDERS.json
           server: nats.example.net:4222
       - name: orders_new_consumer
-        uses: nats-io/jetstream-gh-action/create/consumer@master
+        uses: nats-io/jetstream-gh-action/create/consumer@main
         with:
           config: ORDERS_NEW.json
           stream: ORDERS

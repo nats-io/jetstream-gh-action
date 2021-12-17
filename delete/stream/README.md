@@ -11,9 +11,9 @@ jobs:
   clean_orders:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@main
       - name: orders_stream
-        uses: nats-io/jetstream-gh-action/delete/stream@master
+        uses: nats-io/jetstream-gh-action/delete/stream@main
         with:
           missing_ok: 1
           stream: ORDERS

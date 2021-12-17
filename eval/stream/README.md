@@ -47,9 +47,9 @@ jobs:
   clean_orders:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@main
       - name: purge_orders
-        uses: nats-io/jetstream-gh-action/update/stream@master
+        uses: nats-io/jetstream-gh-action/update/stream@main
         with:
           stream: ORDERS
           expression: |
