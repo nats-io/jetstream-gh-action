@@ -97,7 +97,7 @@ func handleEvalStream() error {
 	var failures []string
 
 	for _, e := range strings.Split(expr, "\n") {
-		eval, err := bexpr.CreateEvaluatorForType(e, nil, info)
+		eval, err := bexpr.CreateEvaluator(e)
 		if err != nil {
 			return err
 		}
@@ -163,7 +163,7 @@ func handleEvalConsumer() error {
 	var failures []string
 
 	for _, e := range strings.Split(expr, "\n") {
-		eval, err := bexpr.CreateEvaluatorForType(e, nil, info)
+		eval, err := bexpr.CreateEvaluator(e, nil)
 		if err != nil {
 			return err
 		}
