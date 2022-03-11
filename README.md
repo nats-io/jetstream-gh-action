@@ -31,9 +31,7 @@ jobs:
     services:
       # starts a JetStream service locally known as "jetstream" on the network
       jetstream:
-        image: synadia/jsm:latest
-        options: >-
-          -e JSM_MODE=server
+        image: nats:latest
 
       # creates a stream on the "jetstream:4222" server started above
       - name: orders_stream
