@@ -26,9 +26,9 @@ type validatable interface {
 type environment interface {
 	GetInput(string) string
 	SetOutput(string, string) error
-	Fatalf(string, ...interface{})
-	Debugf(string, ...interface{})
-	Printf(string, ...interface{})
+	Fatalf(string, ...any)
+	Debugf(string, ...any)
+	Printf(string, ...any)
 }
 
 var (
@@ -452,7 +452,7 @@ func handleCreateStream() error {
 		return fmt.Errorf("CONFIG is required")
 	}
 
-	cj, err := ioutil.ReadFile(cfile)
+	cj, err := os.ReadFile(cfile)
 	if err != nil {
 		return err
 	}
@@ -495,7 +495,7 @@ func handleCreateConsumer() error {
 		return fmt.Errorf("STREAM is required")
 	}
 
-	cj, err := ioutil.ReadFile(cfile)
+	cj, err := os.ReadFile(cfile)
 	if err != nil {
 		return err
 	}
@@ -563,7 +563,7 @@ func validateHelper(input string, cfg validatable) (string, bool, []string, erro
 		return "", false, nil, fmt.Errorf("%s is required", input)
 	}
 
-	cb, err := ioutil.ReadFile(cfile)
+	cb, err := os.ReadFile(cfile)
 	if err != nil {
 		return cfile, false, nil, err
 	}
