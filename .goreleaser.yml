@@ -27,8 +27,6 @@ dockers:
     goarch: amd64
     skip_push: true
     dockerfile: action/Dockerfile
-    binaries:
-      - action
     image_templates:
       - "synadia/jetstream-gh-action:latest"
       - "synadia/jetstream-gh-action:{{.Version}}"
